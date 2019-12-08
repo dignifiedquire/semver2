@@ -259,6 +259,11 @@ impl FromStr for Version {
         }
 
         let mut next = peek1(&mut s).map(|s| s as char);
+        if next == Some('.') {
+            s.consume(1);
+            return Err(ParseError::Invalid { found: next });
+        }
+
         if next == Some('+') || next == Some('-') {
             s.consume(1);
         }
@@ -359,5 +364,12 @@ mod tests {
             "1.2.3foo.8".parse::<Version>().unwrap(),
             Version::new_prerelease(1, 2, 3, vec!["foo".parse().unwrap(), 8.into()])
         );
+    }
+
+    #[test]
+    fn invalid_versions() {
+        assert!("1.2.3.8".parse::<Version>().is_err());
+        assert!("HELLO WORLD".parse::<Version>().is_err());
+        assert!("foo.bar.baz".parse::<Version>().is_err());
     }
 }
