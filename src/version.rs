@@ -172,8 +172,8 @@ pub enum ParseError {
     Io(#[from] io::Error),
 }
 
-fn parse_numeric_range<R: BufRead>(s: R) -> Result<u64, ParseError> {
-    // TODO: strict support
+/// Parses any sequence of digits.
+fn parse_numeric_range_loose<R: BufRead>(s: R) -> Result<u64, ParseError> {
     let raw = take_string_while(s, |b| b.is_ascii_digit())?;
     raw.parse().map_err(|_| ParseError::InvalidNumericRange)
 }
@@ -229,7 +229,7 @@ impl FromStr for Version {
         let mut version = Version::default();
 
         // Major
-        version.major = parse_numeric_range(&mut s)?;
+        version.major = parse_numeric_range_loose(&mut s)?;
         if is_eof(&mut s) {
             return Ok(version);
         }
@@ -241,7 +241,7 @@ impl FromStr for Version {
         }
 
         // Minor (optional)
-        version.minor = parse_numeric_range(&mut s)?;
+        version.minor = parse_numeric_range_loose(&mut s)?;
         if is_eof(&mut s) {
             return Ok(version);
         }
@@ -253,15 +253,19 @@ impl FromStr for Version {
         }
 
         // Patch (optional)
-        version.patch = parse_numeric_range(&mut s)?;
+        version.patch = parse_numeric_range_loose(&mut s)?;
         if is_eof(&mut s) {
             return Ok(version);
         }
 
-        let mut next = take1(&mut s).map(|s| s as char);
+        let mut next = peek1(&mut s).map(|s| s as char);
+        if next == Some('+') || next == Some('-') {
+            s.consume(1);
+        }
 
         // prerelease (optional)
-        if next == Some('-') {
+        // interpret 1.2.3foo as 1.2.3-foo
+        if next.is_some() && next != Some('+') {
             version.prerelease = parse_parts(&mut s)?;
             if is_eof(&mut s) {
                 return Ok(version);
@@ -331,6 +335,29 @@ mod tests {
             }
             .to_string(),
             "1.2.3-0.alpha+bla.9"
+        );
+    }
+
+    #[test]
+    fn loose_versions() {
+        assert_eq!(
+            "001.20.0301".parse::<Version>().unwrap(),
+            Version::new(1, 20, 301)
+        );
+
+        assert_eq!(
+            "1.2.3-beta.01".parse::<Version>().unwrap(),
+            Version::new_prerelease(1, 2, 3, vec!["beta".parse().unwrap(), 1.into()])
+        );
+
+        assert_eq!(
+            "1.2.3foo".parse::<Version>().unwrap(),
+            Version::new_prerelease(1, 2, 3, vec!["foo".parse().unwrap()])
+        );
+
+        assert_eq!(
+            "1.2.3foo.8".parse::<Version>().unwrap(),
+            Version::new_prerelease(1, 2, 3, vec!["foo".parse().unwrap(), 8.into()])
         );
     }
 }
