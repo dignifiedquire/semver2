@@ -1,10 +1,18 @@
 [package]
 name = "semver2"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["dignifiedquire <me@dignifiedquire.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT/Apache-2.0"
+repository = "https://github.com/dignifiedquire/semver2"
+homepage = "https://docs.rs/crate/semver2/"
+documentation = "https://docs.rs/crate/semver2/"
+description = """
+Semantic version parsing and comparison.
+"""
+readme = "README.md"
+keywords = ["version", "semantic", "compare"]
+categories = ["development-tools", "parser-implementations"]
 
 [dependencies]
 omnom = "2.1.2"
